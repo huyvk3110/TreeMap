@@ -1,13 +1,132 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.15.0/d3.js" integrity="sha256-BANs9QteeZKuqwQcdddFZlWLLyUCIke5Nn80f8B5G3g=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.15.0/d3.js"
+        integrity="sha256-BANs9QteeZKuqwQcdddFZlWLLyUCIke5Nn80f8B5G3g=" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="./style.css">
     <title>Document</title>
 </head>
+
 <body>
-    <div id="content">Hello</div>
+    <h1 id="title">Video Game Sales</h1>
+    <h2 id="description">Top 100 Most Sold Video Games Grouped by Platform</h2>
+    <div id="content"></div>
 </body>
+<script>
+    fetch('https://cdn.freecodecamp.org/testable-projects-fcc/data/tree_map/video-game-sales-data.json')
+        .then(res => res.json())
+        .then(data => {
+            const dataset = Object.assign({}, data, { children: data.children.sort((a, b) => b.children.reduce((r, o) => r += parseInt(o.value), 0) - a.children.reduce((r, o) => r += parseInt(o.value), 0)) });
+            const width = 960;
+            const height = 570;
+            const root = d3.hierarchy(dataset).sum(o => o.value);
+            const config = [
+                { cat: "Wii", color: "rgb(76, 146, 195)" },
+                { cat: "DS", color: "rgb(190, 210, 237)" },
+                { cat: "X360", color: "rgb(255, 153, 62)" },
+                { cat: "GB", color: "rgb(255, 201, 147)" },
+                { cat: "PS3", color: "rgb(86, 179, 86)" },
+                { cat: "NES", color: "rgb(173, 229, 161)" },
+                { cat: "PS2", color: "rgb(222, 82, 83)" },
+                { cat: "3DS", color: "rgb(255, 173, 171)" },
+                { cat: "PS4", color: "rgb(169, 133, 202)" },
+                { cat: "SNES", color: "rgb(209, 192, 221)" },
+                { cat: "PS", color: "rgb(163, 120, 111)" },
+                { cat: "N64", color: "rgb(208, 176, 169)" },
+                { cat: "GBA", color: "rgb(233, 146, 206)" },
+                { cat: "XB", color: "rgb(249, 197, 219)" },
+                { cat: "PC", color: "rgb(153, 153, 153)" },
+                { cat: "2600", color: "rgb(210, 210, 210)" },
+                { cat: "PSP", color: "rgb(201, 202, 78)" },
+                { cat: "XOne", color: "rgb(226, 226, 164)" },
+            ]
+
+            window['data'] = dataset
+            const tooltip = d3.select('#content')
+                .append('div')
+                .attr('id', 'tooltip')
+                .style('opacity', 0)
+            //SVG
+            const svg = d3.select('#content')
+                .append('svg')
+                .attr('id', 'chart')
+                .attr('width', width)
+                .attr('height', height);
+            //Rect
+            d3.treemap()
+                .size([width, height])
+                .padding(1)
+                (root);
+            svg.selectAll('rect')
+                .data(root.leaves())
+                .enter()
+                .append('rect')
+                .attr('class', 'tile')
+                .attr('data-name', o => o.data.name)
+                .attr('data-category', o => o.data.category)
+                .attr('data-value', o => o.data.value)
+                .attr('x', o => o.x0)
+                .attr('y', o => o.y0)
+                .attr('width', o => o.x1 - o.x0)
+                .attr('height', o => o.y1 - o.y0)
+                .attr('fill', o => config.find(oo => oo.cat === o.data.category).color)
+                .on('mouseover', o => {
+                    tooltip.transition()
+                        .duration(200)
+                        .style('opacity', 1)
+                    tooltip.html(`Name: ${o.data.name}<br/>Category: ${o.data.category}<br/>Value: ${o.data.value}`)
+                        .style('left', `${d3.event.pageX + 20}px`)
+                        .style('top', `${d3.event.pageY}px`)
+                })
+                .on('mouseout', () => {
+                    tooltip.transition()
+                        .duration(200)
+                        .style('opacity', 0)
+                });
+            //Text
+            svg.selectAll('text')
+                .data(root.leaves())
+                .enter()
+                .append('text')
+                .selectAll('tspan')
+                .data(o => o.data.name.split(' ').map(oo => ({ text: oo, x0: o.x0, y0: o.y0 })))
+                .enter()
+                .append('tspan')
+                .text(o => o.text)
+                .attr('x', o => o.x0 + 3)
+                .attr('y', (o, i) => o.y0 + 10 + i * 8)
+                .style('font-size', '6pt');
+            //Legend
+            const widthLegend = 400;
+            const heightLegend = 160;
+            const legend = d3.select('body')
+                .append('svg')
+                .attr('id', 'legend')
+                .attr('width', widthLegend)
+                .attr('height', heightLegend);
+            //-Rect
+            legend.selectAll('rect')
+                .data(config)
+                .enter()
+                .append('rect')
+                .attr('x', (o, i) => Math.floor(i % 3) * widthLegend / 3)
+                .attr('y', (o, i) => Math.floor(i / 3) * (heightLegend / Math.ceil(config.length / 3)))
+                .attr('width', 20)
+                .attr('height', 20)
+                .style('fill', o => o.color)
+            //-Text
+            legend.selectAll('text')
+                .data(config)
+                .enter()
+                .append('text')
+                .text(o => o.cat)
+                .attr('x', (o, i) => Math.floor(i % 3) * widthLegend / 3 + 25)
+                .attr('y', (o, i) => Math.floor(i / 3) * (heightLegend / Math.ceil(config.length / 3)) + 16)
+        })
+</script>
+
 </html>
