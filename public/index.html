@@ -113,6 +113,7 @@
                 .data(config)
                 .enter()
                 .append('rect')
+                .attr('class', 'legend-item')
                 .attr('x', (o, i) => Math.floor(i % 3) * widthLegend / 3)
                 .attr('y', (o, i) => Math.floor(i / 3) * (heightLegend / Math.ceil(config.length / 3)))
                 .attr('width', 20)
